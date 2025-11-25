@@ -72,15 +72,15 @@ function safeText(str) {
         console.log("Ожидание хотя бы 1 отзыва (макс. 15 сек)...");
         await page.waitForSelector('.business-review-view', { timeout: 15000 }).catch(() => {});
 
-        // Прокручиваем страницу, чтобы гарантированно подгрузить 10 отзывов
+        // Прокрутка страницы, чтобы подгрузить хотя бы 5 отзывов
         let loaded = 0;
         const maxScrollAttempts = 10;
         let attempts = 0;
-        while (loaded < 10 && attempts < maxScrollAttempts) {
+        while (loaded < 5 && attempts < maxScrollAttempts) {
             loaded = await page.$$eval('.business-review-view', nodes => nodes.length);
-            if (loaded >= 10) break;
+            if (loaded >= 5) break;
             await page.evaluate(() => window.scrollBy(0, window.innerHeight));
-            await page.waitForTimeout(500);
+            await new Promise(r => setTimeout(r, 500));
             attempts++;
         }
         console.log(`Отзывы в DOM: ${loaded}`);
@@ -98,21 +98,21 @@ function safeText(str) {
         let average_rating = null;
         if (avg_parts.length >= 3) average_rating = parseFloat(avg_parts[0] + '.' + avg_parts[2]);
 
-        console.log("Сбор первых 10 отзывов и раскрытие текста...");
+        console.log("Сбор первых 5 отзывов и раскрытие текста...");
         const reviewNodes = await page.$$('.business-review-view');
-        const first10 = reviewNodes.slice(0, 10);
+        const first5 = reviewNodes.slice(0, 5);
 
-        await Promise.all(first10.map(async (node, index) => {
+        await Promise.all(first5.map(async (node, index) => {
             const expandBtn = await node.$('.business-review-view__expand');
             if (expandBtn) {
                 await expandBtn.click().catch(() => {});
-                await page.waitForTimeout(20);
+                await new Promise(r => setTimeout(r, 20));
             }
             console.log(`Отзыв ${index + 1} раскрыт`);
         }));
 
         console.log("Сбор данных всех отзывов...");
-        const reviews = await Promise.all(first10.map(async (node, index) => {
+        const reviews = await Promise.all(first5.map(async (node, index) => {
             const review = await page.evaluate(el => {
                 const get = (selector, attr = 'innerText') => {
                     const n = el.querySelector(selector);
