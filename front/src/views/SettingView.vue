@@ -1,31 +1,38 @@
 <script setup>
 import axios from '@/api.js';
 import { ref } from "vue";
+import {parseYandexReviews} from "@/services/yandexParser.js";
 
 const url = ref('');
 const isLoading = ref(false);
 const error = ref("");
 const message = ref("");
+const reviews = ref([]);
 
 const getReviews = async () => {
   if (!url.value) return error.value="Необходимо указать ссылку!";
   isLoading.value=true;
   error.value="";
   message.value = "";
-  try {
-    const res = await axios.get('/api/reviews', {
-      params: { url: url.value }
-    });
 
-    localStorage.setItem("reviews", JSON.stringify(res.data));
-    console.log('Отзывы с бэка:', res.data);
-    isLoading.value=false;
-    error.value="";
-    message.value="Ссылка активирована!";
-  } catch (e) {
-    console.error('Ошибка получения отзывов:', e);
-    isLoading.value=false;
-  }
+  reviews.value = await parseYandexReviews(url.value);
+
+  isLoading.value=false;
+  console.log(reviews.value);
+  // try {
+  //   const res = await axios.get('/api/reviews', {
+  //     params: { url: url.value }
+  //   });
+  //
+  //   localStorage.setItem("reviews", JSON.stringify(res.data));
+  //   console.log('Отзывы с бэка:', res.data);
+  //   isLoading.value=false;
+  //   error.value="";
+  //   message.value="Ссылка активирована!";
+  // } catch (e) {
+  //   console.error('Ошибка получения отзывов:', e);
+  //   isLoading.value=false;
+  // }
 }
 </script>
 

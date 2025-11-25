@@ -2,8 +2,8 @@ const puppeteer = require('puppeteer-core');
 const path = require('path');
 const fs = require('fs');
 
-// const chromiumPath = '/usr/bin/chromium-browser'; // для Ubuntu
-const chromiumPath = 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
+const chromiumPath = '/usr/bin/chromium-browser'; // для Ubuntu
+// const chromiumPath = 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
 if (!fs.existsSync(chromiumPath)) {
     console.error("Chromium не найден по пути /usr/bin/chromium-browser");
     console.error("Проверь: apt install chromium-browser");
