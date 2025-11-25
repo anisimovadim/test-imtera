@@ -3,7 +3,6 @@ const path = require('path');
 const fs = require('fs');
 
 const chromiumPath = '/usr/bin/chromium-browser';
-
 const tempDir = path.join(__dirname, 'temp_puppeteer');
 if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
 
@@ -13,16 +12,11 @@ if (!url) {
     process.exit(1);
 }
 
-// Разрешённые символы — быстрый путь
 const allowed = /^[0-9A-Za-zА-Яа-яЁё .,!?\-:;"'()—…]+$/;
 
 function emojiToHtml(str) {
     if (!str) return str;
-
-    // Если без эмодзи — сразу вернуть
     if (allowed.test(str)) return str;
-
-    // Смешанная строка: посимвольная конвертация
     return Array.from(str).map(ch => {
         if (allowed.test(ch)) return ch;
         const code = ch.codePointAt(0);
@@ -37,33 +31,32 @@ function safeText(str) {
 
 (async () => {
     try {
+        console.log("Запуск браузера...");
         const browser = await puppeteer.launch({
             executablePath: chromiumPath,
-            headless: "new",
+            headless: true,
             args: [
                 '--no-sandbox',
-                '--disable-dev-shm-usage',
-                '--disable-extensions',
-                '--disable-gpu',
                 '--disable-setuid-sandbox',
+                '--disable-dev-shm-usage',
+                '--disable-gpu',
+                '--disable-extensions',
                 '--disable-background-networking',
-                '--disable-default-apps',
                 '--disable-sync',
-                '--disable-translate'
+                '--disable-translate',
+                '--disable-software-rasterizer',
+                '--single-process'
             ]
         });
 
         const page = await browser.newPage();
 
-        // Сильнейшее ускорение — запрет загруза картинок, css, шрифтов
+        console.log("Настройка блокировки ресурсов...");
         await page.setRequestInterception(true);
-        page.on('request', (req) => {
+        page.on('request', req => {
             const t = req.resourceType();
-            if (t === 'image' || t === 'font' || t === 'stylesheet') {
-                req.abort();
-            } else {
-                req.continue();
-            }
+            if (t === 'image' || t === 'font' || t === 'stylesheet') req.abort();
+            else req.continue();
         });
 
         await page.setUserAgent(
@@ -71,63 +64,43 @@ function safeText(str) {
         );
         await page.setExtraHTTPHeaders({ 'Accept-Language': 'ru-RU,ru;q=0.9' });
 
-        // Не ждём networkidle2 — на Яндексе он бесконечный
+        console.log(`Переход на страницу: ${url}`);
         await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 });
 
-        // Читаем заголовок филиала
-        const filial_name = await page.$eval(
-            '.orgpage-header-view__header',
-            el => el.innerText.trim(),
-            null
-        ).catch(() => null);
+        console.log("Ожидание появления хотя бы одного отзыва...");
+        await page.waitForSelector('.business-review-view', { timeout: 30000 }).catch(() => {});
 
+        console.log("Сбор информации о филиале...");
+        const filial_name = await page.$eval('.orgpage-header-view__header', el => el.innerText.trim(), null).catch(() => null);
         const filial_clean = safeText(emojiToHtml(filial_name));
 
-        // Количество оценок
-        const total_reviews_raw = await page.$eval(
-            '.business-rating-amount-view._summary',
-            el => el.innerText,
-            null
-        ).catch(() => null);
+        console.log("Сбор общего количества отзывов...");
+        const total_reviews_raw = await page.$eval('.business-rating-amount-view._summary', el => el.innerText, null).catch(() => null);
+        const total_reviews = total_reviews_raw ? total_reviews_raw.replace(/\D/g, '') : null;
 
-        const total_reviews = total_reviews_raw
-            ? total_reviews_raw.replace(/\D/g, '')
-            : null;
-
-        // Средняя оценка
-        const avg_parts = await page.$$eval(
-            '.business-summary-rating-badge-view__rating-text',
-            nodes => nodes.map(n => n.textContent.trim()).filter(Boolean)
-        ).catch(() => []);
-
+        console.log("Сбор средней оценки...");
+        const avg_parts = await page.$$eval('.business-summary-rating-badge-view__rating-text', nodes => nodes.map(n => n.textContent.trim()).filter(Boolean)).catch(() => []);
         let average_rating = null;
-        if (avg_parts.length >= 3) {
-            average_rating = parseFloat(avg_parts[0] + '.' + avg_parts[2]);
-        }
+        if (avg_parts.length >= 3) average_rating = parseFloat(avg_parts[0] + '.' + avg_parts[2]);
 
-        // Список отзывов
+        console.log("Сбор первых 10 отзывов...");
         const reviewNodes = await page.$$('.business-review-view');
         const first10 = reviewNodes.slice(0, 10);
 
-        // Раскрываем текст отзывов
-        for (const node of first10) {
+        const reviews = await Promise.all(first10.map(async (node, index) => {
+            console.log(`Обработка отзыва ${index + 1}...`);
+
             const expandBtn = await node.$('.business-review-view__expand');
             if (expandBtn) {
                 await expandBtn.click().catch(() => {});
-                await new Promise(r => setTimeout(r, 40));
+                await page.waitForTimeout(20);
             }
-        }
 
-        // Быстрый парсинг отзывов
-        const reviews = [];
-        for (const node of first10) {
             const review = await page.evaluate(el => {
                 const get = (selector, attr = 'innerText') => {
                     const n = el.querySelector(selector);
                     if (!n) return null;
-                    return attr === 'innerText'
-                        ? n.innerText.trim()
-                        : n.getAttribute(attr);
+                    return attr === 'innerText' ? n.innerText.trim() : n.getAttribute(attr);
                 };
 
                 const author = get('.business-review-view__author-name span[itemprop="name"]');
@@ -148,26 +121,22 @@ function safeText(str) {
                 const textBlock = el.querySelector('.spoiler-view__text-container');
                 const text = textBlock ? textBlock.innerText.trim() : null;
 
-                return {
-                    author,
-                    rating,
-                    date,
-                    text
-                };
+                return { author, rating, date, text };
             }, node);
 
             review.author = safeText(emojiToHtml(review.author));
             review.text = safeText(emojiToHtml(review.text));
 
-            reviews.push({
+            console.log(`Отзыв ${index + 1} обработан`);
+            return {
                 author: review.author,
                 rating: review.rating ? parseFloat(review.rating) : null,
                 date: review.date,
                 text: review.text
-            });
-        }
+            };
+        }));
 
-        // Вывод результата
+        console.log("Все отзывы собраны, вывод результата:");
         console.log(JSON.stringify({
             filial_name: filial_clean,
             total_reviews,
@@ -176,9 +145,10 @@ function safeText(str) {
         }, null, 2));
 
         await browser.close();
+        console.log("Браузер закрыт, скрипт завершён");
 
     } catch (e) {
-        console.error(e.message);
+        console.error("Ошибка:", e);
         process.exit(1);
     }
 })();
