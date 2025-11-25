@@ -51,7 +51,7 @@ function safeText(str) {
 
         const page = await browser.newPage();
 
-        console.log("Настройка блокировки ресурсов...");
+        console.log("Блокировка ресурсов (изображения, шрифты, CSS)...");
         await page.setRequestInterception(true);
         page.on('request', req => {
             const t = req.resourceType();
@@ -65,10 +65,10 @@ function safeText(str) {
         await page.setExtraHTTPHeaders({ 'Accept-Language': 'ru-RU,ru;q=0.9' });
 
         console.log(`Переход на страницу: ${url}`);
-        await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 });
+        await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 15000 }).catch(() => {});
 
-        console.log("Ожидание появления хотя бы одного отзыва...");
-        await page.waitForSelector('.business-review-view', { timeout: 30000 }).catch(() => {});
+        console.log("Ожидание хотя бы одного отзыва (макс. 15 сек)...");
+        await page.waitForSelector('.business-review-view', { timeout: 15000 }).catch(() => {});
 
         console.log("Сбор информации о филиале...");
         const filial_name = await page.$eval('.orgpage-header-view__header', el => el.innerText.trim(), null).catch(() => null);
@@ -83,19 +83,22 @@ function safeText(str) {
         let average_rating = null;
         if (avg_parts.length >= 3) average_rating = parseFloat(avg_parts[0] + '.' + avg_parts[2]);
 
-        console.log("Сбор первых 10 отзывов...");
+        console.log("Сбор первых 10 отзывов и раскрытие текста...");
         const reviewNodes = await page.$$('.business-review-view');
         const first10 = reviewNodes.slice(0, 10);
 
-        const reviews = await Promise.all(first10.map(async (node, index) => {
-            console.log(`Обработка отзыва ${index + 1}...`);
-
+        // Раскрываем тексты всех 10 отзывов параллельно
+        await Promise.all(first10.map(async (node, index) => {
             const expandBtn = await node.$('.business-review-view__expand');
             if (expandBtn) {
                 await expandBtn.click().catch(() => {});
-                await page.waitForTimeout(20);
+                await page.waitForTimeout(20); // минимальная пауза для раскрытия текста
             }
+            console.log(`Отзыв ${index + 1} раскрыт`);
+        }));
 
+        console.log("Сбор данных всех отзывов...");
+        const reviews = await Promise.all(first10.map(async (node, index) => {
             const review = await page.evaluate(el => {
                 const get = (selector, attr = 'innerText') => {
                     const n = el.querySelector(selector);
