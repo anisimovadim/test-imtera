@@ -2,7 +2,7 @@ const puppeteer = require('puppeteer-core');
 const path = require('path');
 const fs = require('fs');
 
-const chromiumPath = 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
+const chromiumPath = '/usr/bin/chromium-browser';
 
 const tempDir = path.join(__dirname, 'temp_puppeteer');
 if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });

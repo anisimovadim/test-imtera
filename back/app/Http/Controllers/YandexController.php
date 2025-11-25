@@ -13,8 +13,8 @@ class YandexController extends Controller
             return response('URL не передан', 400);
         }
 
-        $nodePath = '"C:\\Program Files\\nodejs\\node.exe"';
-        $scriptPath = '"D:\\progamms\\OSPanel\\domains\\imtera\\back\\external-scripts\\yandex_reviews.js"';
+        $nodePath = '/usr/bin/node';
+        $scriptPath = '/var/www/test-imtera/back/external-script/yandex_reviews.js';
 
         $command = $nodePath . ' ' . $scriptPath . ' ' . escapeshellarg($url);
 
