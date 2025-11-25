@@ -4,7 +4,7 @@ const fs = require('fs');
 
 const chromiumPath = process.platform === 'win32'
     ? 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe'
-    : '/usr/bin/google-chrome';
+    : '/usr/bin/chromium-browser';
 
 if (!fs.existsSync(chromiumPath)) {
     console.error("[ERROR] Chromium не найден");
