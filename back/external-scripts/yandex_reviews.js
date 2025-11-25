@@ -39,7 +39,7 @@ function safeText(str) {
     try {
         const browser = await puppeteer.launch({
             executablePath: chromiumPath,
-            headless: true,
+            headless: "new",
             args: [
                 '--no-sandbox',
                 '--disable-dev-shm-usage',
