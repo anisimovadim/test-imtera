@@ -4,8 +4,6 @@ const fs = require('fs');
 const os = require('os');
 
 const chromiumPath = '/usr/bin/chromium-browser';
-
-// Минимальный временный профиль для ускорения старта
 const userDataDir = path.join(os.tmpdir(), 'puppeteer-minprofile');
 if (!fs.existsSync(userDataDir)) fs.mkdirSync(userDataDir, { recursive: true });
 
@@ -38,7 +36,7 @@ function safeText(str) {
         const browser = await puppeteer.launch({
             executablePath: chromiumPath,
             headless: true,
-            userDataDir, // минимальный профиль
+            userDataDir,
             args: [
                 '--no-sandbox',
                 '--disable-setuid-sandbox',
@@ -71,8 +69,21 @@ function safeText(str) {
         console.log(`Переход на страницу: ${url}`);
         await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 15000 }).catch(() => {});
 
-        console.log("Ожидание хотя бы одного отзыва (макс. 15 сек)...");
+        console.log("Ожидание хотя бы 1 отзыва (макс. 15 сек)...");
         await page.waitForSelector('.business-review-view', { timeout: 15000 }).catch(() => {});
+
+        // Прокручиваем страницу, чтобы гарантированно подгрузить 10 отзывов
+        let loaded = 0;
+        const maxScrollAttempts = 10;
+        let attempts = 0;
+        while (loaded < 10 && attempts < maxScrollAttempts) {
+            loaded = await page.$$eval('.business-review-view', nodes => nodes.length);
+            if (loaded >= 10) break;
+            await page.evaluate(() => window.scrollBy(0, window.innerHeight));
+            await page.waitForTimeout(500);
+            attempts++;
+        }
+        console.log(`Отзывы в DOM: ${loaded}`);
 
         console.log("Сбор информации о филиале...");
         const filial_name = await page.$eval('.orgpage-header-view__header', el => el.innerText.trim(), null).catch(() => null);
@@ -91,7 +102,6 @@ function safeText(str) {
         const reviewNodes = await page.$$('.business-review-view');
         const first10 = reviewNodes.slice(0, 10);
 
-        // Раскрываем тексты всех 10 отзывов параллельно
         await Promise.all(first10.map(async (node, index) => {
             const expandBtn = await node.$('.business-review-view__expand');
             if (expandBtn) {
