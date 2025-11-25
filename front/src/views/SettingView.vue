@@ -8,32 +8,38 @@ const isLoading = ref(false);
 const error = ref("");
 const message = ref("");
 const reviews = ref([]);
+const rating = ref(null);
+const reviewsCount = ref(0);
 
 const getReviews = async () => {
-  if (!url.value) return error.value="Необходимо указать ссылку!";
-  isLoading.value=true;
-  error.value="";
-  message.value = "";
+  if (!url.value) {
+    error.value = "Необходимо указать ссылку!";
+    return;
+  }
 
-  reviews.value = await parseYandexReviews(url.value);
+  isLoading.value = true;
+  error.value = '';
+  message.value = '';
+  reviews.value = [];
+  rating.value = null;
+  reviewsCount.value = 0;
 
-  isLoading.value=false;
-  console.log(reviews.value);
-  // try {
-  //   const res = await axios.get('/api/reviews', {
-  //     params: { url: url.value }
-  //   });
-  //
-  //   localStorage.setItem("reviews", JSON.stringify(res.data));
-  //   console.log('Отзывы с бэка:', res.data);
-  //   isLoading.value=false;
-  //   error.value="";
-  //   message.value="Ссылка активирована!";
-  // } catch (e) {
-  //   console.error('Ошибка получения отзывов:', e);
-  //   isLoading.value=false;
-  // }
-}
+  try {
+    const { data } = await axios.get('/api/reviews', { params: { url: url.value } });
+
+    if (data.error) {
+      error.value = data.error;
+      return;
+    }
+    localStorage.setItem("reviews", JSON.stringify(data));
+    message.value = "Ссылка активирована!";
+  } catch (e) {
+    console.error('Ошибка получения отзывов:', e);
+    error.value = e.response?.data?.error || "Не удалось получить отзывы!";
+  } finally {
+    isLoading.value = false;
+  }
+};
 </script>
 
 <template>
