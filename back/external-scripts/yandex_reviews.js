@@ -1,10 +1,13 @@
 const puppeteer = require('puppeteer-core');
 const path = require('path');
 const fs = require('fs');
+const os = require('os');
 
 const chromiumPath = '/usr/bin/chromium-browser';
-const tempDir = path.join(__dirname, 'temp_puppeteer');
-if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
+
+// Минимальный временный профиль для ускорения старта
+const userDataDir = path.join(os.tmpdir(), 'puppeteer-minprofile');
+if (!fs.existsSync(userDataDir)) fs.mkdirSync(userDataDir, { recursive: true });
 
 const url = process.argv[2];
 if (!url) {
@@ -31,27 +34,28 @@ function safeText(str) {
 
 (async () => {
     try {
-        console.log("Запуск браузера...");
+        console.log("Запуск браузера с минимальным профилем...");
         const browser = await puppeteer.launch({
             executablePath: chromiumPath,
             headless: true,
+            userDataDir, // минимальный профиль
             args: [
                 '--no-sandbox',
                 '--disable-setuid-sandbox',
                 '--disable-dev-shm-usage',
                 '--disable-gpu',
+                '--disable-software-rasterizer',
+                '--single-process',
                 '--disable-extensions',
                 '--disable-background-networking',
                 '--disable-sync',
-                '--disable-translate',
-                '--disable-software-rasterizer',
-                '--single-process'
+                '--disable-translate'
             ]
         });
 
         const page = await browser.newPage();
 
-        console.log("Блокировка ресурсов (изображения, шрифты, CSS)...");
+        console.log("Блокировка тяжелых ресурсов...");
         await page.setRequestInterception(true);
         page.on('request', req => {
             const t = req.resourceType();
@@ -92,7 +96,7 @@ function safeText(str) {
             const expandBtn = await node.$('.business-review-view__expand');
             if (expandBtn) {
                 await expandBtn.click().catch(() => {});
-                await page.waitForTimeout(20); // минимальная пауза для раскрытия текста
+                await page.waitForTimeout(20);
             }
             console.log(`Отзыв ${index + 1} раскрыт`);
         }));
