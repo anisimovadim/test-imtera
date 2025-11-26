@@ -27,7 +27,9 @@ class YandexScraperService
         $url = escapeshellarg($url);
 
         // 2>&1 чтобы stderr шёл в $output
-        $command = "\"{$this->nodePath}\" \"{$this->scriptPath}\" {$url} 2>&1";
+        $command = 'HOME=/var/www/chrome-data "' . $this->nodePath . '" "' . $this->scriptPath . '" ' . $url . ' 2>&1';
+
+//        $command = "\"{$this->nodePath}\" \"{$this->scriptPath}\" {$url} 2>&1";
 
         $output = [];
         $returnVar = null;
