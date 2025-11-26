@@ -38,7 +38,8 @@ function safeText(str) {
                 '--no-sandbox',
                 '--disable-setuid-sandbox',
                 '--disable-dev-shm-usage',
-                '--disable-gpu'
+                '--disable-gpu',
+                '--proxy-server=IP:PORT'
             ],
             userDataDir: '/var/www/chrome-data'
         });
@@ -68,22 +69,27 @@ function safeText(str) {
         const avg_parts = await page.$$eval('.business-summary-rating-badge-view__rating-text', nodes => nodes.map(n => n.textContent.trim()).filter(Boolean)).catch(() => []);
         const average_rating = avg_parts.length >= 3 ? parseFloat(avg_parts[0] + '.' + avg_parts[2]) : null;
 
-        // Скроллим и раскрываем все кнопки "Ещё"
-        let expandButtonsExist = true;
-        while (expandButtonsExist) {
-            expandButtonsExist = await page.$$eval('.business-review-view__expand', buttons => {
-                if (buttons.length === 0) return false;
-                buttons.forEach(btn => btn.click());
-                return true;
-            });
-            if (expandButtonsExist) await page.evaluate(() => window.scrollBy(0, 1000));
+        // Скроллим и раскрываем кнопки "Ещё", пока не будет 10 отзывов
+        let reviewsCount = 0;
+        while (reviewsCount < 10) {
+            const expandButtons = await page.$$('.business-review-view__expand');
+            if (expandButtons.length === 0) break;
+
+            for (const btn of expandButtons) {
+                await btn.click();
+                await new Promise(r => setTimeout(r, 100));
+            }
+
+            await page.evaluate(() => window.scrollBy(0, 1000));
             await new Promise(r => setTimeout(r, 200));
+
+            reviewsCount = await page.$$eval('.business-review-view', nodes => nodes.length);
         }
 
-        // Парсим все отзывы
+        // Парсим максимум 10 отзывов
         const reviewNodes = await page.$$('.business-review-view');
         const reviews = [];
-        for (const node of reviewNodes) {
+        for (const node of reviewNodes.slice(0, 10)) {
             const review = await page.evaluate(el => {
                 const get = (selector, attr = 'innerText') => {
                     const n = el.querySelector(selector);
