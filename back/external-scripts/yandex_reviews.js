@@ -39,7 +39,6 @@ function safeText(str) {
                 '--disable-setuid-sandbox',
                 '--disable-dev-shm-usage',
                 '--disable-gpu',
-                '--proxy-server=IP:PORT'
             ],
             userDataDir: '/var/www/chrome-data'
         });
