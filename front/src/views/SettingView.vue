@@ -2,6 +2,7 @@
 import axios from '@/api.js';
 import { ref } from "vue";
 import {parseYandexReviews} from "@/services/yandexParser.js";
+import router from "@/router/index.js";
 
 const url = ref('');
 const isLoading = ref(false);
@@ -10,7 +11,7 @@ const message = ref("");
 const reviews = ref([]);
 const rating = ref(null);
 const reviewsCount = ref(0);
-
+const emit = defineEmits(['update-user'])
 const saveReviews = async () => {
   if (!url.value) {
     error.value = "Необходимо указать ссылку!";
@@ -32,6 +33,7 @@ const saveReviews = async () => {
       return;
     }
     message.value = "Ссылка активирована!";
+    emit('update-user');
   } catch (e) {
     console.error('Ошибка получения отзывов:', e);
     error.value = e.response?.data?.error || "Не удалось получить отзывы!";
