@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\UserSetting;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -23,7 +24,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/reviews', [\App\Http\Controllers\YandexController::class, 'getReviews']);
     Route::post('/logout', [\App\Http\Controllers\AuthController::class, 'logout']);
     Route::get('/user', function () {
-        $user = auth()->user()->load(['userSetting', 'comments']);
-        return response()->json($user);
+        $userId = auth()->id();
+        $userSetting = UserSetting::with('comments')->where('user_id', $userId)->first();
+        return response()->json($userSetting);
     });
 });
