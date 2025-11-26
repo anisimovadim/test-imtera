@@ -33,7 +33,7 @@ onMounted(()=>{
               <div class="comments__item-header">
                 <div class="comments__item-header-text">
                   <span class="comments__item-datetime"> {{comment.date}} </span>
-                  <span class="comments__item-filial"> {{comment.filial_name}} </span>
+                  <span class="comments__item-filial"> {{userSetting.filial_name}} </span>
                   <div class="comments__item-icon">
                     <img src="@/components/icons/yandex_maps.svg" alt="" />
                   </div>
