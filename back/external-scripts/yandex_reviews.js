@@ -1,11 +1,9 @@
 #!/usr/bin/env node
 const puppeteer = require('puppeteer');
+const fs = require('fs');
 
-// Путь к кэшу Puppeteer
 process.env.PUPPETEER_CACHE_DIR = '/var/cache/puppeteer';
-
 const chromiumPath = `/usr/bin/google-chrome`;
-
 const url = process.argv[2];
 if (!url) {
     console.error("[ERROR] URL не передан");
@@ -26,47 +24,12 @@ function safeText(str) {
     return Buffer.from(str, 'utf8').toString();
 }
 
-// Ждем появления текста в контейнере
-async function getReviewText(node, timeout = 2000, interval = 50) {
-    const start = Date.now();
-    while (Date.now() - start < timeout) {
-        const text = await node.$eval('.spoiler-view__text-container', el => el.innerText.trim()).catch(() => null);
-        if (text && text.length > 0) return text;
-        await sleep(interval);
-    }
-    return null;
-}
-
-// Функция раскрытия всех «ещё» кнопок отзывов
-async function expandReviews(page, limit = 10) {
-    let reviews = [];
-    let retries = 0;
-
-    while (reviews.length < limit && retries < 20) {
-        reviews = await page.$$('.business-review-view');
-        for (const node of reviews) {
-            const expandBtn = await node.$('.business-review-view__expand');
-            if (expandBtn) await expandBtn.click().catch(() => {});
-        }
-        await page.evaluate(() => window.scrollBy(0, 1000));
-        await sleep(200);
-        retries++;
-    }
-
-    return reviews.slice(0, limit);
-}
-
 (async () => {
     try {
         const browser = await puppeteer.launch({
             executablePath: chromiumPath,
             headless: true,
-            args: [
-                '--no-sandbox',
-                '--disable-setuid-sandbox',
-                '--disable-dev-shm-usage',
-                '--disable-gpu'
-            ],
+            args: ['--no-sandbox','--disable-setuid-sandbox','--disable-dev-shm-usage','--disable-gpu'],
             userDataDir: '/var/www/chrome-data'
         });
 
@@ -75,7 +38,7 @@ async function expandReviews(page, limit = 10) {
         await page.setRequestInterception(true);
         page.on('request', req => {
             const t = req.resourceType();
-            if (['image', 'font', 'stylesheet'].includes(t)) req.abort();
+            if (['image','font','stylesheet'].includes(t)) req.abort();
             else req.continue();
         });
 
@@ -88,18 +51,36 @@ async function expandReviews(page, limit = 10) {
         const totalReviewsRaw = await page.$eval('.business-rating-amount-view._summary', el => el.innerText).catch(() => null);
         const totalReviews = totalReviewsRaw ? totalReviewsRaw.replace(/\D/g, '') : null;
 
-        const avgParts = await page.$$eval('.business-summary-rating-badge-view__rating-text', nodes =>
-            nodes.map(n => n.textContent.trim()).filter(Boolean)
-        ).catch(() => []);
+        const avgParts = await page.$$eval('.business-summary-rating-badge-view__rating-text', nodes => nodes.map(n => n.textContent.trim()).filter(Boolean)).catch(() => []);
         let rating = null;
         if (avgParts.length >= 3) rating = parseFloat(`${avgParts[0]}.${avgParts[2]}`);
 
-        // Раскрываем и получаем первые 10 отзывов
-        const reviewNodes = await expandReviews(page, 10);
+        // Прокрутка и ожидание отзывов
+        let reviewNodes = [];
+        for (let i = 0; i < 20; i++) {
+            reviewNodes = await page.$$('.business-review-view');
+            if (reviewNodes.length > 0) break;
+            await page.evaluate(() => window.scrollBy(0, 1000));
+            await sleep(500);
+        }
 
         const reviews = [];
-        for (const node of reviewNodes) {
-            const review = await page.evaluate(el => {
+
+        async function getReviewText(node) {
+            // Попытки дождаться текста внутри отзыва
+            for (let i = 0; i < 10; i++) {
+                const text = await node.$eval('.spoiler-view__text-container', el => el.innerText.trim()).catch(() => null);
+                if (text && text.length > 0) return text;
+                // если есть кнопка "ещё", кликаем
+                const expandBtn = await node.$('.business-review-view__expand');
+                if (expandBtn) await expandBtn.click().catch(() => {});
+                await sleep(200);
+            }
+            return null;
+        }
+
+        for (const node of reviewNodes.slice(0, 10)) {
+            const reviewData = await page.evaluate(el => {
                 const q = (sel, attr = 'innerText') => {
                     const n = el.querySelector(sel);
                     if (!n) return null;
@@ -108,6 +89,7 @@ async function expandReviews(page, limit = 10) {
                 const author = q('.business-review-view__author-name span[itemprop="name"]');
                 const ratingVal = q('[itemprop="reviewRating"] meta[itemprop="ratingValue"]', 'content');
                 const isoDate = q('.business-review-view__date meta[itemprop="datePublished"]', 'content');
+
                 let date = null;
                 if (isoDate) {
                     const d = new Date(isoDate);
@@ -116,13 +98,16 @@ async function expandReviews(page, limit = 10) {
                     const yyyy = d.getFullYear();
                     date = `${dd}.${mm}.${yyyy}`;
                 }
+
                 return { author, rating: ratingVal ? parseFloat(ratingVal) : null, date };
             }, node);
 
-            const text = await getReviewText(node);
-            review.text = safeText(emojiToHtml(text));
-            review.author = safeText(emojiToHtml(review.author));
-            reviews.push(review);
+            reviewData.text = await getReviewText(node);
+
+            reviewData.author = safeText(emojiToHtml(reviewData.author));
+            reviewData.text = safeText(emojiToHtml(reviewData.text));
+
+            reviews.push(reviewData);
         }
 
         console.log(JSON.stringify({ company: safeText(emojiToHtml(company)), reviews_count: totalReviews, rating, reviews }));
