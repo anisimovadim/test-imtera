@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+process.env.PUPPETEER_CACHE_DIR = '/var/cache/puppeteer';
 const puppeteer = require('puppeteer'); // используем puppeteer, встроенный Chromium
 const fs = require('fs');
 
