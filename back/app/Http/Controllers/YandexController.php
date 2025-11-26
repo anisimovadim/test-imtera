@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\UserSetting;
 use App\Services\YandexScraperService;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 
 class YandexController extends Controller
@@ -59,11 +60,12 @@ class YandexController extends Controller
         $commentsToAttach = [];
 
         foreach ($data['reviews'] as $review) {
+            $date = isset($review['date']) ? Carbon::parse($review['date'])->toDateTimeString() : null;
 
             $comment = \App\Models\Comment::create([
                 'author' => $review['author'] ?? null,
                 'rating' => $review['rating'] ?? null,
-                'date' => $review['date'] ?? null,
+                'date' => $date,
                 'text' => $review['text'] ?? null,
             ]);
             $commentsToAttach[] = $comment->id;
