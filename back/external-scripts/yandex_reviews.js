@@ -37,7 +37,8 @@ function safeText(str) {
                 '--disable-setuid-sandbox',
                 '--disable-dev-shm-usage',
                 '--disable-gpu'
-            ]
+            ],
+            userDataDir: '/tmp/chromium-data'
         });
 
         const page = await browser.newPage();
