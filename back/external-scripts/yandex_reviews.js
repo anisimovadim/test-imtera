@@ -1,6 +1,5 @@
 #!/usr/bin/env node
 const puppeteer = require('puppeteer');
-const fs = require('fs');
 
 // Путь к кэшу Puppeteer
 process.env.PUPPETEER_CACHE_DIR = '/var/cache/puppeteer';
@@ -25,6 +24,19 @@ function emojiToHtml(str) {
 function safeText(str) {
     if (!str) return null;
     return Buffer.from(str, 'utf8').toString();
+}
+
+// Функция ожидания текста отзыва
+async function getReviewText(node, timeout = 2000, interval = 50) {
+    const start = Date.now();
+
+    while (Date.now() - start < timeout) {
+        const text = await node.$eval('.spoiler-view__text-container', el => el.innerText.trim()).catch(() => null);
+        if (text && text.length > 0) return text;
+        await sleep(interval);
+    }
+
+    return null;
 }
 
 (async () => {
@@ -59,10 +71,13 @@ function safeText(str) {
         const totalReviewsRaw = await page.$eval('.business-rating-amount-view._summary', el => el.innerText).catch(() => null);
         const totalReviews = totalReviewsRaw ? totalReviewsRaw.replace(/\D/g, '') : null;
 
-        const avgParts = await page.$$eval('.business-summary-rating-badge-view__rating-text', nodes => nodes.map(n => n.textContent.trim()).filter(Boolean)).catch(() => []);
+        const avgParts = await page.$$eval('.business-summary-rating-badge-view__rating-text', nodes =>
+            nodes.map(n => n.textContent.trim()).filter(Boolean)
+        ).catch(() => []);
         let rating = null;
         if (avgParts.length >= 3) rating = parseFloat(`${avgParts[0]}.${avgParts[2]}`);
 
+        // Скроллим, пока не загрузятся отзывы
         let reviewNodes = [];
         for (let i = 0; i < 10; i++) {
             reviewNodes = await page.$$('.business-review-view');
@@ -88,7 +103,6 @@ function safeText(str) {
                 const author = q('.business-review-view__author-name span[itemprop="name"]');
                 const ratingVal = q('[itemprop="reviewRating"] meta[itemprop="ratingValue"]', 'content');
                 const isoDate = q('.business-review-view__date meta[itemprop="datePublished"]', 'content');
-                const text = q('.spoiler-view__text-container');
 
                 let date = null;
                 if (isoDate) {
@@ -99,11 +113,12 @@ function safeText(str) {
                     date = `${dd}.${mm}.${yyyy}`;
                 }
 
-                return { author, rating: ratingVal ? parseFloat(ratingVal) : null, date, text };
+                return { author, rating: ratingVal ? parseFloat(ratingVal) : null, date };
             }, node);
 
+            const text = await getReviewText(node); // ждем появления текста
+            review.text = safeText(emojiToHtml(text));
             review.author = safeText(emojiToHtml(review.author));
-            review.text = safeText(emojiToHtml(review.text));
 
             reviews.push(review);
         }
