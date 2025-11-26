@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->string('author');
             $table->string('rating');
-            $table->date('date');
+            $table->dateTime('date');
             $table->text('text');
             $table->timestamps();
         });
