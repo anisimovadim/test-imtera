@@ -5,7 +5,7 @@ const fs = require('fs');
 // Путь к кэшу Puppeteer
 process.env.PUPPETEER_CACHE_DIR = '/var/cache/puppeteer';
 
-const chromiumPath = require('puppeteer').executablePath();
+const chromiumPath = `/usr/bin/chromium-browser`;
 
 const url = process.argv[2];
 if (!url) {
