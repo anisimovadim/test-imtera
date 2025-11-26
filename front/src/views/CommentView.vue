@@ -10,7 +10,6 @@ const reviews = ref('');
 
 onMounted(()=>{
   reviews.value = JSON.parse(localStorage.getItem("reviews"));
-  console.log(reviews.value);
 })
 </script>
 
@@ -30,7 +29,7 @@ onMounted(()=>{
               <div class="comments__item-header">
                 <div class="comments__item-header-text">
                   <span class="comments__item-datetime"> {{review.date}} </span>
-                  <span class="comments__item-filial"> {{reviews.company}} </span>
+                  <span class="comments__item-filial"> {{reviews.filial_name}} </span>
                   <div class="comments__item-icon">
                     <img src="@/components/icons/yandex_maps.svg" alt="" />
                   </div>
@@ -56,12 +55,12 @@ onMounted(()=>{
         <div class="comments__rating">
           <div class="rating">
             <div class="rating__grade">
-              <div class="rating__count">{{ reviews.rating }}</div>
+              <div class="rating__count">{{ reviews.average_rating }}</div>
 
               <div class="rating__stars">
                 <ul class="rating__stars-list">
                   <li class="rating__star" v-for="i in 5" :key="i">
-                    <img :src="i <= Math.floor(reviews.rating) ? solid : outline" alt="" />
+                    <img :src="i <= Math.floor(reviews.average_rating) ? solid : outline" alt="" />
                   </li>
                 </ul>
               </div>
@@ -69,7 +68,7 @@ onMounted(()=>{
 
             <div class="rating__amount">
               Всего отзывов:
-              <span class="rating__amount-int">{{ reviews.reviews_count }}</span>
+              <span class="rating__amount-int">{{ reviews.total_reviews }}</span>
             </div>
           </div>
         </div>
