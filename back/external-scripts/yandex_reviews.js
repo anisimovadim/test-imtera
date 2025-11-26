@@ -1,9 +1,7 @@
 #!/usr/bin/env node
 const puppeteer = require('puppeteer');
 
-// Путь к кэшу Puppeteer
 process.env.PUPPETEER_CACHE_DIR = '/var/cache/puppeteer';
-
 const chromiumPath = `/usr/bin/google-chrome`;
 
 const url = process.argv[2];
@@ -24,6 +22,15 @@ function emojiToHtml(str) {
 function safeText(str) {
     if (!str) return null;
     return Buffer.from(str, 'utf8').toString();
+}
+
+// Безопасное раскрытие текста отзыва
+async function expandReview(node) {
+    const btn = await node.$('.business-review-view__expand');
+    if (btn) {
+        await btn.click().catch(() => {});
+        await sleep(200);
+    }
 }
 
 (async () => {
@@ -62,9 +69,9 @@ function safeText(str) {
         let rating = null;
         if (avgParts.length >= 3) rating = parseFloat(`${avgParts[0]}.${avgParts[2]}`);
 
-        // Получаем первые 10 отзывов
+        // Скроллим и ждём появления отзывов
         let reviewNodes = [];
-        for (let i = 0; i < 10; i++) {
+        for (let i = 0; i < 20; i++) { // увеличил до 20 попыток для надежности
             reviewNodes = await page.$$('.business-review-view');
             if (reviewNodes.length > 0) break;
             await page.evaluate(() => window.scrollBy(0, 1000));
@@ -72,59 +79,38 @@ function safeText(str) {
         }
 
         const reviews = [];
-        const first10 = reviewNodes.slice(0, 10);
+        for (const node of reviewNodes.slice(0, 10)) {
+            await expandReview(node); // раскрываем текст
 
-        // Функция безопасного раскрытия текста отзыва
-        async function expandReview(node) {
-            try {
-                const expandBtn = await node.$('.spoiler-view__toggle');
-                if (expandBtn) {
-                    await expandBtn.click();
-                    await sleep(200); // дать время тексту прогрузиться
-                }
-            } catch (e) {}
-        }
-
-        async function getReviewText(node) {
-            for (let i = 0; i < 10; i++) {
-                await expandReview(node);
-                const text = await node.$eval('.spoiler-view__text-container', el => el.innerText.trim()).catch(() => null);
-                if (text && text.length > 0) return text;
-                await sleep(200);
-            }
-            return null;
-        }
-
-        for (const node of first10) {
             const review = await page.evaluate(el => {
                 const q = (sel, attr = 'innerText') => {
                     const n = el.querySelector(sel);
                     if (!n) return null;
                     return attr === 'innerText' ? n.innerText.trim() : n.getAttribute(attr);
                 };
+
                 const author = q('.business-review-view__author-name span[itemprop="name"]');
                 const ratingVal = q('[itemprop="reviewRating"] meta[itemprop="ratingValue"]', 'content');
                 const isoDate = q('.business-review-view__date meta[itemprop="datePublished"]', 'content');
-                return { author, rating: ratingVal ? parseFloat(ratingVal) : null, isoDate };
+
+                // Иногда текст лежит напрямую в el или в .spoiler-view__text-container
+                let text = q('.spoiler-view__text-container');
+                if (!text) text = el.innerText || null;
+
+                let date = null;
+                if (isoDate) {
+                    const d = new Date(isoDate);
+                    const dd = String(d.getDate()).padStart(2,'0');
+                    const mm = String(d.getMonth()+1).padStart(2,'0');
+                    const yyyy = d.getFullYear();
+                    date = `${dd}.${mm}.${yyyy}`;
+                }
+
+                return { author, rating: ratingVal ? parseFloat(ratingVal) : null, date, text };
             }, node);
-
-            // Получаем текст через безопасную функцию
-            review.text = await getReviewText(node);
-
-            // Форматируем дату
-            if (review.isoDate) {
-                const d = new Date(review.isoDate);
-                const dd = String(d.getDate()).padStart(2,'0');
-                const mm = String(d.getMonth()+1).padStart(2,'0');
-                const yyyy = d.getFullYear();
-                review.date = `${dd}.${mm}.${yyyy}`;
-            } else {
-                review.date = null;
-            }
 
             review.author = safeText(emojiToHtml(review.author));
             review.text = safeText(emojiToHtml(review.text));
-            delete review.isoDate;
 
             reviews.push(review);
         }
