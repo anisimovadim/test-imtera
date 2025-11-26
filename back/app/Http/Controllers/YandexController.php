@@ -72,7 +72,7 @@ class YandexController extends Controller
         }
 
         $userSetting->comments()->attach($commentsToAttach);
-        
+
         $userSetting->update([
             'filial_name' => $data['filial_name'],
             'total_reviews' => $data['total_reviews'],
