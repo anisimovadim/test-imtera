@@ -31,7 +31,6 @@ const saveReviews = async () => {
       error.value = data.error;
       return;
     }
-    localStorage.setItem("reviews", JSON.stringify(data));
     message.value = "Ссылка активирована!";
   } catch (e) {
     console.error('Ошибка получения отзывов:', e);
