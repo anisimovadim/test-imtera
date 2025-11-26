@@ -25,7 +25,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [\App\Http\Controllers\AuthController::class, 'logout']);
     Route::get('/user', function () {
         $userId = auth()->id();
-        $userSetting = UserSetting::with('comments')->where('user_id', $userId)->first();
+        $userSetting = UserSetting::with('comments', 'user')->where('user_id', $userId)->first();
         return response()->json($userSetting);
     });
 });
