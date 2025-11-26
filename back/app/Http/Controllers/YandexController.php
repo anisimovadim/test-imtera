@@ -37,8 +37,7 @@ class YandexController extends Controller
         if ($userSetting) {
             $userSetting->comments()->detach();
             $userSetting->update(['link' => $newLink]);
-        }
-        else {
+        } else {
             $userSetting = UserSetting::create([
                 'user_id' => $user->id,
                 'link' => $newLink,
