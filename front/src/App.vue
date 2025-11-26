@@ -11,17 +11,22 @@ const loadedOnce = ref(false);
 const user = ref(null);
 const isLoad = ref(true);
 
-const getAuthUser = async () =>{
-  try{
+const getAuthUser = async () => {
+  try {
     const res = await axios.get('/user');
-    user.value=res.data;
+    user.value = res.data;
     loadedOnce.value = true;
-    isLoad.value=false;
-  } catch (e){
+    isLoad.value = false;
+  } catch (e) {
     loadedOnce.value = false;
-    router.push({name: 'auth'});
+    isLoad.value = false;
+
+    localStorage.removeItem('token');
+    localStorage.removeItem('reviews');
+    router.push({ name: 'auth' });
   }
-}
+};
+
 
 onMounted(()=>{
   if (route.name !== 'auth'){
@@ -46,7 +51,7 @@ const resetLoadedOnce = () => {
 
 <template>
   <div class="app__container">
-    <menu-component v-if="route.name !== 'auth' && !isLoad" :account-name="user.account_name"/>
+    <menu-component v-if="route.name !== 'auth' && !isLoad" :account-name="user?.account_name"/>
     <logout-component  v-if="route.name !== 'auth'" @reset-auth-flag="resetLoadedOnce"/>
     <router-view />
   </div>
