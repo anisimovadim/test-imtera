@@ -1,20 +1,25 @@
 #!/usr/bin/env node
-const puppeteer = require('puppeteer');
+const puppeteer = require('puppeteer-core');
+const path = require('path');
+const fs = require('fs');
 
-process.env.PUPPETEER_CACHE_DIR = '/var/cache/puppeteer';
-const chromiumPath = `/usr/bin/google-chrome`;
+const chromiumPath = process.platform === 'win32'
+    ? 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe'
+    : '/usr/bin/google-chrome';
+
+const tempDir = path.join(__dirname, 'temp_puppeteer');
+if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
 
 const url = process.argv[2];
 if (!url) {
-    console.error("[ERROR] URL не передан");
+    console.error("URL не передан");
     process.exit(1);
 }
 
-const sleep = ms => new Promise(r => setTimeout(r, ms));
 const allowed = /^[0-9A-Za-zА-Яа-яЁё .,!?\-:;"'()—…]+$/;
 
 function emojiToHtml(str) {
-    if (!str) return null;
+    if (!str) return str;
     if (allowed.test(str)) return str;
     return Array.from(str).map(ch => allowed.test(ch) ? ch : `&#${ch.codePointAt(0)};`).join('');
 }
@@ -22,15 +27,6 @@ function emojiToHtml(str) {
 function safeText(str) {
     if (!str) return null;
     return Buffer.from(str, 'utf8').toString();
-}
-
-// Безопасное раскрытие текста отзыва
-async function expandReview(node) {
-    const btn = await node.$('.business-review-view__expand');
-    if (btn) {
-        await btn.click().catch(() => {});
-        await sleep(200);
-    }
 }
 
 (async () => {
@@ -56,70 +52,87 @@ async function expandReview(node) {
             else req.continue();
         });
 
-        await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+        await page.setUserAgent(
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        );
         await page.setExtraHTTPHeaders({ 'Accept-Language': 'ru-RU,ru;q=0.9' });
 
-        await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 90000 });
+        await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 });
 
-        const company = await page.$eval('.orgpage-header-view__header', el => el.innerText.trim()).catch(() => null);
-        const totalReviewsRaw = await page.$eval('.business-rating-amount-view._summary', el => el.innerText).catch(() => null);
-        const totalReviews = totalReviewsRaw ? totalReviewsRaw.replace(/\D/g, '') : null;
+        const filial_name = await page.$eval('.orgpage-header-view__header', el => el.innerText.trim()).catch(() => null);
+        const filial_clean = safeText(emojiToHtml(filial_name));
 
-        const avgParts = await page.$$eval('.business-summary-rating-badge-view__rating-text', nodes => nodes.map(n => n.textContent.trim()).filter(Boolean)).catch(() => []);
-        let rating = null;
-        if (avgParts.length >= 3) rating = parseFloat(`${avgParts[0]}.${avgParts[2]}`);
+        const total_reviews_raw = await page.$eval('.business-rating-amount-view._summary', el => el.innerText).catch(() => null);
+        const total_reviews = total_reviews_raw ? total_reviews_raw.replace(/\D/g, '') : null;
 
-        // Скроллим и ждём появления отзывов
-        let reviewNodes = [];
-        for (let i = 0; i < 20; i++) { // увеличил до 20 попыток для надежности
-            reviewNodes = await page.$$('.business-review-view');
-            if (reviewNodes.length > 0) break;
-            await page.evaluate(() => window.scrollBy(0, 1000));
-            await sleep(500);
+        const avg_parts = await page.$$eval('.business-summary-rating-badge-view__rating-text', nodes => nodes.map(n => n.textContent.trim()).filter(Boolean)).catch(() => []);
+        const average_rating = avg_parts.length >= 3 ? parseFloat(avg_parts[0] + '.' + avg_parts[2]) : null;
+
+        // Скроллим и раскрываем все кнопки "Ещё"
+        let expandButtonsExist = true;
+        while (expandButtonsExist) {
+            expandButtonsExist = await page.$$eval('.business-review-view__expand', buttons => {
+                if (buttons.length === 0) return false;
+                buttons.forEach(btn => btn.click());
+                return true;
+            });
+            if (expandButtonsExist) await page.evaluate(() => window.scrollBy(0, 1000));
+            await new Promise(r => setTimeout(r, 200));
         }
 
+        // Парсим все отзывы
+        const reviewNodes = await page.$$('.business-review-view');
         const reviews = [];
-        for (const node of reviewNodes.slice(0, 10)) {
-            await expandReview(node); // раскрываем текст
-
+        for (const node of reviewNodes) {
             const review = await page.evaluate(el => {
-                const q = (sel, attr = 'innerText') => {
-                    const n = el.querySelector(sel);
+                const get = (selector, attr = 'innerText') => {
+                    const n = el.querySelector(selector);
                     if (!n) return null;
                     return attr === 'innerText' ? n.innerText.trim() : n.getAttribute(attr);
                 };
 
-                const author = q('.business-review-view__author-name span[itemprop="name"]');
-                const ratingVal = q('[itemprop="reviewRating"] meta[itemprop="ratingValue"]', 'content');
-                const isoDate = q('.business-review-view__date meta[itemprop="datePublished"]', 'content');
-
-                // Иногда текст лежит напрямую в el или в .spoiler-view__text-container
-                let text = q('.spoiler-view__text-container');
-                if (!text) text = el.innerText || null;
+                const author = get('.business-review-view__author-name span[itemprop="name"]');
+                const rating = get('[itemprop="reviewRating"] meta[itemprop="ratingValue"]', 'content');
+                const isoDate = get('.business-review-view__date meta[itemprop="datePublished"]', 'content');
 
                 let date = null;
                 if (isoDate) {
                     const d = new Date(isoDate);
-                    const dd = String(d.getDate()).padStart(2,'0');
-                    const mm = String(d.getMonth()+1).padStart(2,'0');
+                    const dd = String(d.getDate()).padStart(2, '0');
+                    const mm = String(d.getMonth() + 1).padStart(2, '0');
                     const yyyy = d.getFullYear();
-                    date = `${dd}.${mm}.${yyyy}`;
+                    const hh = String(d.getHours()).padStart(2, '0');
+                    const min = String(d.getMinutes()).padStart(2, '0');
+                    date = `${dd}.${mm}.${yyyy} ${hh}:${min}`;
                 }
 
-                return { author, rating: ratingVal ? parseFloat(ratingVal) : null, date, text };
+                const textBlock = el.querySelector('.spoiler-view__text-container');
+                const text = textBlock ? textBlock.innerText.trim() : null;
+
+                return { author, rating, date, text };
             }, node);
 
             review.author = safeText(emojiToHtml(review.author));
             review.text = safeText(emojiToHtml(review.text));
 
-            reviews.push(review);
+            reviews.push({
+                author: review.author,
+                rating: review.rating ? parseFloat(review.rating) : null,
+                date: review.date,
+                text: review.text
+            });
         }
 
-        console.log(JSON.stringify({ company: safeText(emojiToHtml(company)), reviews_count: totalReviews, rating, reviews }));
+        console.log(JSON.stringify({
+            filial_name: filial_clean,
+            total_reviews,
+            average_rating,
+            reviews
+        }, null, 2));
 
         await browser.close();
-    } catch (err) {
-        console.error(err.message);
+    } catch (e) {
+        console.error(e.message);
         process.exit(1);
     }
 })();
