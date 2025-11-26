@@ -13,6 +13,10 @@ const logout = async () => {
     router.push({name:'auth'});
   } catch (e){
     console.log(e);
+    localStorage.removeItem('token');
+    localStorage.removeItem('reviews');
+    emit('resetAuthFlag');
+    router.push({name:'auth'});
   }
 }
 
