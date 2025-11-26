@@ -2,12 +2,14 @@
 import axios from '@/api.js'
 import router from "@/router/index.js";
 
+const emit = defineEmits(['resetAuthFlag']);
 
 const logout = async () => {
   try{
     await axios.post('/logout');
     localStorage.removeItem('token');
     localStorage.removeItem('reviews');
+    emit('resetAuthFlag');
     router.push({name:'auth'});
   } catch (e){
     console.log(e);

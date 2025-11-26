@@ -1,7 +1,12 @@
 <script setup>
 import { onMounted, onUnmounted, ref } from 'vue'
 
-const nameAccount = ref('Название аккаунта ')
+const props = defineProps({
+  accountName:{
+    type: String,
+    default: 'Название аккаунта'
+  }
+})
 const tagTitle = ref('Отзывы')
 
 const isMobile = ref(window.innerWidth < 955)
@@ -45,7 +50,7 @@ onUnmounted(() => {
         </div>
 
         <div class="menu__account-name">
-          {{ nameAccount }}
+          {{ props.accountName }}
         </div>
 
         <div class="menu__tag">
