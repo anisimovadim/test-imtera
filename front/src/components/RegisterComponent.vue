@@ -14,7 +14,7 @@ const register = async ()=>{
   errors.value = null;
 
   try{
-    await axios.post('/api/register', {
+    await axios.post('/register', {
       login: login.value,
       password: password.value,
       account_name: account_name.value

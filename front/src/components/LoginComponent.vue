@@ -13,7 +13,7 @@ const auth = async ()=>{
   error.value = null;
 
   try{
-    const res = await axios.post('api/login', {
+    const res = await axios.post('/login', {
       login: login.value, password: password.value
     });
     localStorage.setItem('token', res.data.token);

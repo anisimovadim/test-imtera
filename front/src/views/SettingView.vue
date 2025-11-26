@@ -25,7 +25,7 @@ const getReviews = async () => {
   reviewsCount.value = 0;
 
   try {
-    const { data } = await axios.get('/api/reviews', { params: { url: url.value } });
+    const { data } = await axios.get('/reviews', { params: { url: url.value } });
 
     if (data.error) {
       error.value = data.error;

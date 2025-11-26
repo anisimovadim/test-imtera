@@ -5,7 +5,7 @@ import router from "@/router/index.js";
 
 const logout = async () => {
   try{
-    await axios.post('/api/logout');
+    await axios.post('/logout');
     localStorage.removeItem('token');
     localStorage.removeItem('reviews');
     router.push({name:'auth'});
