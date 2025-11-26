@@ -48,7 +48,7 @@ const saveReviews = async () => {
 </script>
 
 <template>
-  <div class="container">
+  <div class="container" v-if="userSetting">
     <h2>Подключить Яндекс</h2>
     <form @submit.prevent="saveReviews">
       <div class="form-field">
