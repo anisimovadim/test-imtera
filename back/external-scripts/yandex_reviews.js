@@ -76,11 +76,11 @@ function safeText(str) {
 
             for (const btn of expandButtons) {
                 await btn.click();
-                await page.waitForTimeout(100);
+                await new Promise(r => setTimeout(r, 100));
             }
 
             await page.evaluate(() => window.scrollBy(0, 1000));
-            await page.waitForTimeout(200);
+            await new Promise(r => setTimeout(r, 200));
 
             reviewsCount = await page.$$eval('.business-review-view', nodes => nodes.length);
         }
