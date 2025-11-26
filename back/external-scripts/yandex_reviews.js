@@ -1,15 +1,6 @@
 #!/usr/bin/env node
-const puppeteer = require('puppeteer-core');
+const puppeteer = require('puppeteer'); // используем puppeteer, встроенный Chromium
 const fs = require('fs');
-
-const chromiumPath = process.platform === 'win32'
-    ? 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe'
-    : '/snap/bin/chromium';
-
-if (!fs.existsSync(chromiumPath)) {
-    console.error("[ERROR] Chromium не найден");
-    process.exit(1);
-}
 
 const url = process.argv[2];
 if (!url) {
@@ -34,8 +25,7 @@ function safeText(str) {
 (async () => {
     try {
         const browser = await puppeteer.launch({
-            executablePath: chromiumPath,
-            headless: "new",
+            headless: true, // обязательно headless
             args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu']
         });
 
