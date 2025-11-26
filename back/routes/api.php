@@ -20,7 +20,7 @@ Route::get('/test', [\App\Http\Controllers\AuthController::class, 'test']);
 
 
 Route::middleware('auth:sanctum')->group(function () {
-    Route::get('/reviews', [\App\Http\Controllers\YandexController::class, 'getReviews']);
+    Route::post('/reviews', [\App\Http\Controllers\YandexController::class, 'getReviews']);
     Route::post('/logout', [\App\Http\Controllers\AuthController::class, 'logout']);
     Route::get('/user', fn () => auth()->user());
 });
