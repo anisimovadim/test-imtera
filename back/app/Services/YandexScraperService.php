@@ -13,7 +13,7 @@ class YandexScraperService
             ? 'C:\\Program Files\\nodejs\\node.exe'
             : '/usr/bin/node';
 
-        $this->scriptPath = base_path('external-scripts/yandex_reviews.js'); // путь к твоему Puppeteer скрипту
+        $this->scriptPath = base_path('external-scripts/yandex_reviews.js');
     }
 
     /**
@@ -26,24 +26,31 @@ class YandexScraperService
     {
         $url = escapeshellarg($url);
 
-        $command = "\"{$this->nodePath}\" \"{$this->scriptPath}\" {$url}";
+        // 2>&1 чтобы stderr шёл в $output
+        $command = "\"{$this->nodePath}\" \"{$this->scriptPath}\" {$url} 2>&1";
 
-        $output = null;
+        $output = [];
         $returnVar = null;
 
         exec($command, $output, $returnVar);
 
+        // Если ошибка, возвращаем детальный вывод
         if ($returnVar !== 0) {
             return [
-                'error' => 'Не удалось получить отзывы с Яндекс.Карт'
+                'error' => 'Не удалось получить отзывы с Яндекс.Карт',
+                'return_code' => $returnVar,
+                'output' => $output
             ];
         }
 
-        $json = implode("", $output);
+        $json = implode("\n", $output);
         $data = json_decode($json, true);
 
         if (!$data) {
-            return ['error' => 'Ошибка парсинга JSON'];
+            return [
+                'error' => 'Ошибка парсинга JSON',
+                'raw_output' => $json
+            ];
         }
 
         return $data;
