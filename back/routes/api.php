@@ -26,6 +26,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/user', function () {
         $userId = auth()->id();
         $userSetting = UserSetting::with('comments', 'user')->where('user_id', $userId)->first();
-        return response()->json($userSetting);
+        if ($userSetting){
+            return response()->json($userSetting);
+        }
+        return auth();
     });
 });
