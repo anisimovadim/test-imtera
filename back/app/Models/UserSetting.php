@@ -8,6 +8,13 @@ use Illuminate\Database\Eloquent\Model;
 class UserSetting extends Model
 {
     use HasFactory;
+    protected $fillable = [
+        'user_id',
+        'link',
+        'filial_name',
+        'total_reviews',
+        'average_rating',
+    ];
     public function user(){
         return $this->belongsTo(User::class);
     }
