@@ -244,6 +244,7 @@ form{
   font-weight: 600;
   line-height: 20px;
   font-size: 12px;
+  word-break: break-all;
 }
 .form-field__label a {
   color: var(--color-placeholder);
