@@ -11,7 +11,7 @@ const reviews = ref([]);
 const rating = ref(null);
 const reviewsCount = ref(0);
 
-const getReviews = async () => {
+const saveReviews = async () => {
   if (!url.value) {
     error.value = "Необходимо указать ссылку!";
     return;
@@ -25,7 +25,7 @@ const getReviews = async () => {
   reviewsCount.value = 0;
 
   try {
-    const { data } = await axios.get('/reviews', { params: { url: url.value } });
+    const { data } = await axios.post('/reviews', { url: url.value })
 
     if (data.error) {
       error.value = data.error;
@@ -45,7 +45,7 @@ const getReviews = async () => {
 <template>
   <div class="container">
     <h2>Подключить Яндекс</h2>
-    <form @submit.prevent="getReviews">
+    <form @submit.prevent="saveReviews">
       <div class="form-field">
         <label for="yandexLink" class="form-field__label">
           Укажите ссылку на Яндекс, пример
