@@ -17,6 +17,11 @@ const rating = ref(null);
 const reviewsCount = ref(0);
 const emit = defineEmits(['update-user'])
 const saveReviews = async () => {
+  const yandexReviewRegex = /^https:\/\/yandex\.ru\/maps\/org\/[^\/]+\/\d+\/reviews\/$/;
+  if (yandexReviewRegex.test(url.value)){
+    error.value = "Укажите правильную ссылку, пример указан выше!";
+    return;
+  }
   if (!url.value) {
     error.value = "Необходимо указать ссылку!";
     return;

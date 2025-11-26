@@ -19,7 +19,7 @@ class YandexController extends Controller
     /**
      * Возвращает JSON с отзывами для Vue
      */
-    public function getReviews(Request $request)
+    public function saveReviews(Request $request)
     {
         $user = $request->user();
         $newLink = $request->input('url');
