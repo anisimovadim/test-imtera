@@ -5,7 +5,7 @@ const fs = require('fs');
 // Путь к кэшу Puppeteer
 process.env.PUPPETEER_CACHE_DIR = '/var/cache/puppeteer';
 
-const chromiumPath = `/usr/bin/chromium-browser`;
+const chromiumPath = `/usr/bin/google-chrome`;
 
 const url = process.argv[2];
 if (!url) {
@@ -38,7 +38,6 @@ function safeText(str) {
                 '--disable-dev-shm-usage',
                 '--disable-gpu'
             ],
-            userDataDir: '/tmp/puppeteer_user_data'
         });
 
         const page = await browser.newPage();
