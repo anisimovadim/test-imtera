@@ -8,7 +8,7 @@ const props = defineProps({
     type:Object,
   }
 })
-const url = ref('');
+const url = ref(props.userSetting?.link || '');
 const isLoading = ref(false);
 const error = ref("");
 const message = ref("");
@@ -45,11 +45,6 @@ const saveReviews = async () => {
     isLoading.value = false;
   }
 };
-onMounted(()=>{
-  if (props.userSetting?.link){
-    url.value=props.userSetting?.link;
-  }
-})
 </script>
 
 <template>
