@@ -38,7 +38,7 @@ function safeText(str) {
                 '--disable-dev-shm-usage',
                 '--disable-gpu'
             ],
-            userDataDir: '/tmp/chromium-data'
+            userDataDir: '/tmp/puppeteer_user_data'
         });
 
         const page = await browser.newPage();
