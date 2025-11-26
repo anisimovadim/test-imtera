@@ -1,9 +1,13 @@
 <script setup>
 import axios from '@/api.js';
-import { ref } from "vue";
+import {onMounted, ref} from "vue";
 import {parseYandexReviews} from "@/services/yandexParser.js";
 import router from "@/router/index.js";
-
+const props = defineProps({
+  userSetting: {
+    type:Object,
+  }
+})
 const url = ref('');
 const isLoading = ref(false);
 const error = ref("");
@@ -41,6 +45,11 @@ const saveReviews = async () => {
     isLoading.value = false;
   }
 };
+onMounted(()=>{
+  if (props.userSetting?.link){
+    url.value=props.userSetting?.link;
+  }
+})
 </script>
 
 <template>
