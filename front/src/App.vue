@@ -51,8 +51,8 @@ const resetLoadedOnce = () => {
 </script>
 
 <template>
-  <div class="app__container">
-    <menu-component v-if="route.name !== 'auth' && !isLoad" :account-name="userSetting?.user?.account_name || userSetting?.account_name"/>
+  <div class="app__container" v-if="!isLoad">
+    <menu-component v-if="route.name !== 'auth'" :account-name="userSetting?.user?.account_name || userSetting?.account_name"/>
     <logout-component  v-if="route.name !== 'auth'" @reset-auth-flag="resetLoadedOnce"/>
     <router-view v-slot="{Component}">
       <component :is="Component" :userSetting="userSetting" @update-user="getAuthUser"/>
