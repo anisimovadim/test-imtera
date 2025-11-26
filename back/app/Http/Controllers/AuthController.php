@@ -9,6 +9,9 @@ use Illuminate\Support\Facades\Hash;
 
 class AuthController extends Controller
 {
+    public function test(){
+        return response()->json('Тест пройдлен');
+    }
     public function register(Request $request)
     {
         $request->validate([
