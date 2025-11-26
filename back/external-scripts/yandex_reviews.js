@@ -95,21 +95,21 @@ function safeText(str) {
                 const rating = get('[itemprop="reviewRating"] meta[itemprop="ratingValue"]', 'content');
                 const isoDate = get('.business-review-view__date meta[itemprop="datePublished"]', 'content');
 
-                let date = null;
-                if (isoDate) {
-                    const d = new Date(isoDate);
-                    const dd = String(d.getDate()).padStart(2, '0');
-                    const mm = String(d.getMonth() + 1).padStart(2, '0');
-                    const yyyy = d.getFullYear();
-                    const hh = String(d.getHours()).padStart(2, '0');
-                    const min = String(d.getMinutes()).padStart(2, '0');
-                    date = `${dd}.${mm}.${yyyy} ${hh}:${min}`;
-                }
+                // let date = null;
+                // if (isoDate) {
+                //     const d = new Date(isoDate);
+                //     const dd = String(d.getDate()).padStart(2, '0');
+                //     const mm = String(d.getMonth() + 1).padStart(2, '0');
+                //     const yyyy = d.getFullYear();
+                //     const hh = String(d.getHours()).padStart(2, '0');
+                //     const min = String(d.getMinutes()).padStart(2, '0');
+                //     date = `${dd}.${mm}.${yyyy} ${hh}:${min}`;
+                // }
 
                 const textBlock = el.querySelector('.spoiler-view__text-container');
                 const text = textBlock ? textBlock.innerText.trim() : null;
 
-                return { author, rating, date, text };
+                return { author, rating, isoDate, text };
             }, node);
 
             review.author = safeText(emojiToHtml(review.author));
@@ -118,7 +118,7 @@ function safeText(str) {
             reviews.push({
                 author: review.author,
                 rating: review.rating ? parseFloat(review.rating) : null,
-                date: review.date,
+                date: review.isoDate,
                 text: review.text
             });
         }
