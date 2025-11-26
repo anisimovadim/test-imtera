@@ -46,7 +46,7 @@ class YandexController extends Controller
                 'user_id' => $user->id,
                 'link' => $newLink,
                 'filial_name' => '',
-                 'total_reviews' => '0',
+                'total_reviews' => '0',
                 'average_rating' => '0'
             ]);
         }
@@ -72,6 +72,7 @@ class YandexController extends Controller
         }
 
         $userSetting->comments()->attach($commentsToAttach);
+        dd($data['reviews']);
         $userSetting->update([
             'total_reviews' => $data['reviews']['total_reviews'],
             'average_rating' => $data['average_rating'] ?? '0',
