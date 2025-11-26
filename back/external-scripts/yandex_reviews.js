@@ -1,7 +1,12 @@
 #!/usr/bin/env node
-process.env.PUPPETEER_CACHE_DIR = '/var/cache/puppeteer';
-const puppeteer = require('puppeteer'); // используем puppeteer, встроенный Chromium
+const puppeteer = require('puppeteer');
 const fs = require('fs');
+
+// Путь к кэшу Puppeteer
+process.env.PUPPETEER_CACHE_DIR = '/var/cache/puppeteer';
+
+// Явный путь к встроенному Chromium
+const chromiumPath = '/var/cache/puppeteer/chrome/linux-142.0.7444.175/chrome-linux64/chrome';
 
 const url = process.argv[2];
 if (!url) {
@@ -26,13 +31,18 @@ function safeText(str) {
 (async () => {
     try {
         const browser = await puppeteer.launch({
-            headless: true, // обязательно headless
-            args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu']
+            executablePath: chromiumPath,
+            headless: true,
+            args: [
+                '--no-sandbox',
+                '--disable-setuid-sandbox',
+                '--disable-dev-shm-usage',
+                '--disable-gpu'
+            ]
         });
 
         const page = await browser.newPage();
 
-        // Отключаем тяжелые ресурсы
         await page.setRequestInterception(true);
         page.on('request', req => {
             const t = req.resourceType();
@@ -45,26 +55,14 @@ function safeText(str) {
 
         await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 90000 });
 
-        // Название компании
-        await page.waitForSelector('.orgpage-header-view__header', { timeout: 60000 }).catch(() => {});
         const company = await page.$eval('.orgpage-header-view__header', el => el.innerText.trim()).catch(() => null);
-
-        // Количество отзывов
-        await page.waitForSelector('.business-rating-amount-view._summary', { timeout: 60000 }).catch(() => {});
         const totalReviewsRaw = await page.$eval('.business-rating-amount-view._summary', el => el.innerText).catch(() => null);
         const totalReviews = totalReviewsRaw ? totalReviewsRaw.replace(/\D/g, '') : null;
 
-        // Средний рейтинг (объединяем три блока)
-        const avgParts = await page.$$eval(
-            '.business-summary-rating-badge-view__rating-text',
-            nodes => nodes.map(n => n.textContent.trim()).filter(Boolean)
-        ).catch(() => []);
+        const avgParts = await page.$$eval('.business-summary-rating-badge-view__rating-text', nodes => nodes.map(n => n.textContent.trim()).filter(Boolean)).catch(() => []);
         let rating = null;
-        if (avgParts.length >= 3) {
-            rating = parseFloat(`${avgParts[0]}.${avgParts[2]}`);
-        }
+        if (avgParts.length >= 3) rating = parseFloat(`${avgParts[0]}.${avgParts[2]}`);
 
-        // Подгружаем отзывы
         let reviewNodes = [];
         for (let i = 0; i < 10; i++) {
             reviewNodes = await page.$$('.business-review-view');
@@ -73,8 +71,8 @@ function safeText(str) {
             await sleep(500);
         }
 
-        const first10 = reviewNodes.slice(0, 10);
         const reviews = [];
+        const first10 = reviewNodes.slice(0, 10);
 
         for (const node of first10) {
             const expandBtn = await node.$('.business-review-view__expand');
@@ -87,7 +85,6 @@ function safeText(str) {
                     if (!n) return null;
                     return attr === 'innerText' ? n.innerText.trim() : n.getAttribute(attr);
                 };
-
                 const author = q('.business-review-view__author-name span[itemprop="name"]');
                 const ratingVal = q('[itemprop="reviewRating"] meta[itemprop="ratingValue"]', 'content');
                 const isoDate = q('.business-review-view__date meta[itemprop="datePublished"]', 'content');
@@ -111,16 +108,9 @@ function safeText(str) {
             reviews.push(review);
         }
 
-        // Чистый JSON для Laravel
-        console.log(JSON.stringify({
-            company: safeText(emojiToHtml(company)),
-            reviews_count: totalReviews,
-            rating,
-            reviews
-        }));
+        console.log(JSON.stringify({ company: safeText(emojiToHtml(company)), reviews_count: totalReviews, rating, reviews }));
 
         await browser.close();
-
     } catch (err) {
         console.error(err.message);
         process.exit(1);
