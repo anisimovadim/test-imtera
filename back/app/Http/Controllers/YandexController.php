@@ -16,9 +16,6 @@ class YandexController extends Controller
         $this->service = $service;
     }
 
-    /**
-     * Возвращает JSON с отзывами для Vue
-     */
     public function saveReviews(Request $request)
     {
         $user = $request->user();

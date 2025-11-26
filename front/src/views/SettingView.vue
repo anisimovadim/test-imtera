@@ -27,7 +27,7 @@ const saveReviews = async () => {
     error.value = "Укажите правильную ссылку, пример указан выше!";
     return;
   }
-  
+
   isLoading.value = true;
   error.value = '';
   message.value = '';

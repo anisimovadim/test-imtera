@@ -17,7 +17,6 @@ class YandexScraperService
     }
 
     /**
-     * Получить отзывы по ссылке
      *
      * @param string $url
      * @return array
@@ -36,7 +35,6 @@ class YandexScraperService
 
         exec($command, $output, $returnVar);
 
-        // Если ошибка, возвращаем детальный вывод
         if ($returnVar !== 0) {
             return [
                 'error' => 'Не удалось получить отзывы с Яндекс.Карт',

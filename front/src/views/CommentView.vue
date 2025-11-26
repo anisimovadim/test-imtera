@@ -1,20 +1,13 @@
 <script setup>
 import solid from '@/components/icons/star_solid.svg'
 import outline from '@/components/icons/star_outline.svg'
-import {onMounted, ref} from 'vue'
+
 const props = defineProps({
   userSetting: {
     type:Object,
   }
 })
-const rating = ref(5);
-const averageRating = ref(4.7);
-const amountRating = ref(1145);
-const reviews = ref('');
 
-onMounted(()=>{
-  reviews.value = JSON.parse(localStorage.getItem("reviews"));
-})
 </script>
 
 <template>
