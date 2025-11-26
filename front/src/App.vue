@@ -8,15 +8,16 @@ import router from "@/router/index.js";
 
 const route = useRoute();
 const loadedOnce = ref(false);
-const user = ref(null);
+const userSetting = ref(null);
 const isLoad = ref(true);
 
 const getAuthUser = async () => {
   try {
     const res = await axios.get('/user');
-    user.value = res.data;
+    userSetting.value = res.data;
     loadedOnce.value = true;
     isLoad.value = false;
+    console.log(userSetting.value);
   } catch (e) {
     loadedOnce.value = false;
     isLoad.value = false;
@@ -51,9 +52,11 @@ const resetLoadedOnce = () => {
 
 <template>
   <div class="app__container">
-    <menu-component v-if="route.name !== 'auth' && !isLoad" :account-name="user?.account_name"/>
+    <menu-component v-if="route.name !== 'auth' && !isLoad" :account-name="userSetting?.user?.account_name"/>
     <logout-component  v-if="route.name !== 'auth'" @reset-auth-flag="resetLoadedOnce"/>
-    <router-view />
+    <router-view v-slot="{Component}">
+      <component is="Component" :userSetting="userSetting"/>
+    </router-view>
   </div>
 </template>
 
