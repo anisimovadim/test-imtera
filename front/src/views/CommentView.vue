@@ -19,7 +19,7 @@ onMounted(()=>{
 
 <template>
   <div class="container">
-    <div class="comments" v-if="userSetting">
+    <div class="comments" v-if="userSetting?.comments">
       <div class="comments__tag">
         <div class="comments__tag-icon">
           <img src="@/components/icons/yandex_maps.svg" alt="" />
