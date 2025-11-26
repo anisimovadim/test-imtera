@@ -29,6 +29,6 @@ Route::middleware('auth:sanctum')->group(function () {
         if ($userSetting){
             return response()->json($userSetting);
         }
-        return \App\Models\User::query()->find('id', $userId);
+        return \App\Models\User::query()->where('id', $userId)->first();
     });
 });
