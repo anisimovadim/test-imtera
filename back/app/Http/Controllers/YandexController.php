@@ -72,9 +72,9 @@ class YandexController extends Controller
         }
 
         $userSetting->comments()->attach($commentsToAttach);
-        dd($data['reviews']);
+        dd($data);
         $userSetting->update([
-            'total_reviews' => $data['reviews']['total_reviews'],
+            'total_reviews' => $data['total_reviews'],
             'average_rating' => $data['average_rating'] ?? '0',
             ]);
 
