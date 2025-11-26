@@ -22,5 +22,8 @@ Route::get('/test', [\App\Http\Controllers\AuthController::class, 'test']);
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/reviews', [\App\Http\Controllers\YandexController::class, 'getReviews']);
     Route::post('/logout', [\App\Http\Controllers\AuthController::class, 'logout']);
-    Route::get('/user', fn () => auth()->user());
+    Route::get('/user', function () {
+        $user = auth()->user()->load(['userSetting', 'comments']);
+        return response()->json($user);
+    });
 });
