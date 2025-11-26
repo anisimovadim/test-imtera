@@ -38,6 +38,7 @@ function safeText(str) {
                 '--disable-dev-shm-usage',
                 '--disable-gpu'
             ],
+            userDataDir: '/var/www/chrome-data'
         });
 
         const page = await browser.newPage();
